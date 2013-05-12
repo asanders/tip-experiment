@@ -162,15 +162,15 @@ def analyse_alignment_data(scan_seq_dir, scan_seq=0):
     np.save(os.path.join(set_folder, 'positions.npy'), positions)
     np.save(os.path.join(set_folder, 'voltages.npy'), voltages)
     for var in variables:
-        vars()[var+'_amp'], vars()[var+'_x0'], vars()[var+'_x_fwhm'],\
-        vars()[var+'_y0'], vars()[var+'_y_fwhm']\
+        globals()[var+'_amp'], globals()[var+'_x0'], globals()[var+'_x_fwhm'],\
+        globals()[var+'_y0'], globals()[var+'_y_fwhm']\
         = get_seq_var_params(scans, var)
         # save arrays #
-        np.save(os.path.join(set_folder, var+'_amp' + '.npy'), vars()[var+'_amp'])
-        np.save(os.path.join(set_folder, var+'_x0' + '.npy'), vars()[var+'_x0'])
-        np.save(os.path.join(set_folder, var+'_x_fwhm' + '.npy'), vars()[var+'_x_fwhm'])
-        np.save(os.path.join(set_folder, var+'_y0' + '.npy'), vars()[var+'_y0'])
-        np.save(os.path.join(set_folder, var+'_y_fwhm' + '.npy'), vars()[var+'_y_fwhm'])
+        np.save(os.path.join(set_folder, var+'_amp' + '.npy'), globals()[var+'_amp'])
+        np.save(os.path.join(set_folder, var+'_x0' + '.npy'), globals()[var+'_x0'])
+        np.save(os.path.join(set_folder, var+'_x_fwhm' + '.npy'), globals()[var+'_x_fwhm'])
+        np.save(os.path.join(set_folder, var+'_y0' + '.npy'), globals()[var+'_y0'])
+        np.save(os.path.join(set_folder, var+'_y_fwhm' + '.npy'), globals()[var+'_y_fwhm'])
     
     # display analysed alignment data #
     # setup figure #
@@ -195,288 +195,140 @@ def analyse_alignment_data(scan_seq_dir, scan_seq=0):
               'figure.figsize': fig_size}
     plt.rcParams.update(fig_params)
     plt.rcParams['legend.loc'] = 'best'
-    
-    # figure functions #
-    def fig_details(ax):
+
+    # define function to add subplot #
+    def add_analysis_subplot(ax, source, x, y_param, x_label='', y_label=''):
+        '''
+        Adds a subplot to an alignment analysis figure
+        ax is a subplot axis.
+        source is either 'I' for current or 'F' for force.
+        param is either 'x0', 'y0', 'x_fwhm', 'y_fwhm' or 'amp'.
+        x and y are data arrays with labels x_label and y_label.
+        '''
+        if source == 'I': vs = ['r', 'theta']
+        elif source == 'F': vs = ['fr', 'ftheta']
+        # set marker colours to red and blue #
+        ax.set_color_cycle(['r', 'b'])
+        for var in (v for v in variables if v in vs):
+            if var == 'r': name = r'$I_r$'
+            elif var == 'theta': name = r'$I_\theta$'
+            elif var == 'fr': name = r'$F_r$'
+            elif var == 'ftheta': name = r'$F_\theta$'
+            # override axis if twinned axes with different scales are used #
+            if y_param == 'amp' and (var == 'fr' or var == 'r'):
+                ax2 = ax
+                label = y_label.split('{', 1)[0]+'{r,'+y_label.split('{', 1)[1]
+                ax.set_ylabel(label)
+            elif y_param == 'amp' and (var == 'ftheta' or var == 'theta'):
+                ax = ax.twinx()
+                label = y_label.split('{', 1)[0]+'{\\theta,'+y_label.split('{', 1)[1]
+                ax.set_ylabel(label)
+            line = ax.errorbar(x, globals()[var+'_'+y_param],
+                              #yerr=vars()[var+'_'+param+'_error'],
+                              fmt='o', linestyle='', markersize=4, label=name)
         #ax.text(0.05, 0.95, var, ha='left', va='top', color='black',
         #        fontsize=10, fontweight='bold', transform=ax.transAxes)
         ax.legend()
+        if 'voltage' or 'scan' in x_label:
+            ax.set_xlim(0.9*x.min(), 1.1*x.max())
+        #ax.set_ylim(0.9*y.min(), 1.1*y.max())
+        ax.set_xlabel(x_label)
+        if y_param != 'amp':
+            ax.set_ylabel(y_label)
         return 0
     
     # plot figure #
     fig = plt.figure()
+    # force subplots #
     ax = fig.add_subplot(251)
-    for var in (v for v in variables if v == 'fr' or v == 'ftheta'):
-        if var == 'fr': name = r'$F_r$'
-        elif var == 'ftheta': name = r'$F_\theta$'
-        sax = ax.errorbar(voltages, vars()[var+'_x0'],
-                          #yerr=vars()[var+'_x_fwhm'],
-                          fmt='o', linestyle='', markersize=4, label=name)
-    fig_details(ax)
-    ax.set_xlim(0.9*voltages.min(), 1.1*voltages.max())
-    ax.set_xlabel('voltage (V)')
-    ax.set_ylabel('$x_0$')
-
+    add_analysis_subplot(ax, 'F', voltages, 'x0',\
+                         x_label='voltage (V)', y_label='$x_0$')
     ax = fig.add_subplot(252)
-    for var in (v for v in variables if v == 'fr' or v == 'ftheta'):
-        if var == 'fr': name = r'$F_r$'
-        elif var == 'ftheta': name = r'$F_\theta$'
-        sax = ax.errorbar(voltages, vars()[var+'_y0'],
-                          #yerr=vars()[var+'_y_fwhm'],
-                          fmt='o', linestyle='', markersize=4, label=name)
-    fig_details(ax)
-    ax.set_xlim(0.9*voltages.min(), 1.1*voltages.max())
-    ax.set_xlabel('voltage (V)')
-    ax.set_ylabel('$y_0$')
-
+    add_analysis_subplot(ax, 'F', voltages, 'y0',\
+                         x_label='voltage (V)', y_label='$y_0$')
     ax = fig.add_subplot(253)
-    for var in (v for v in variables if v == 'fr' or v == 'ftheta'):
-        if var == 'fr': name = r'$F_r$'
-        elif var == 'ftheta': name = r'$F_\theta$'
-        sax = ax.errorbar(voltages, vars()[var+'_x_fwhm'],
-                          #yerr=vars()[var+'_x_fwhm'],
-                          fmt='o', linestyle='', markersize=4, label=name)
-    fig_details(ax)
-    ax.set_xlim(0.9*voltages.min(), 1.1*voltages.max())
-    ax.set_xlabel('voltage (V)')
-    ax.set_ylabel('$x_{fwhm}$')
-
+    add_analysis_subplot(ax, 'F', voltages, 'x_fwhm',\
+                         x_label='voltage (V)', y_label='$x_{fwhm}$')
     ax = fig.add_subplot(254)
-    for var in (v for v in variables if v == 'fr' or v == 'ftheta'):
-        if var == 'fr': name = r'$F_r$'
-        elif var == 'ftheta': name = r'$F_\theta$'
-        sax = ax.errorbar(voltages, vars()[var+'_y_fwhm'],
-                          #yerr=vars()[var+'_y_fwhm'],
-                          fmt='o', linestyle='', markersize=4, label=name)
-    fig_details(ax)
-    ax.set_xlim(0.9*voltages.min(), 1.1*voltages.max())
-    ax.set_xlabel('voltage (V)')
-    ax.set_ylabel('$y_{fwhm}$')
-
-    rax = fig.add_subplot(255)
-    tax = rax.twinx()
-    for var in (v for v in variables if v == 'fr' or v == 'ftheta'):
-        if var == 'fr':
-            name = r'$F_r$'
-            ax = rax
-            fmtv = 'ro'
-        elif var == 'ftheta':
-            name = r'$F_\theta$'
-            ax = tax
-            fmtv = 'bo'
-        sax = ax.errorbar(voltages, vars()[var+'_amp'],
-                          #yerr=vars()[var+'_y_fwhm'],
-                          fmt=fmtv, linestyle='', markersize=4, label=name)
-    #fig_details(rax); fig_details(tax)
-    rax.set_xlim(0.9*voltages.min(), 1.1*voltages.max())
-    rax.set_xlabel('voltage (V)')
-    rax.set_ylabel('$F_{amp}$')
-
+    add_analysis_subplot(ax, 'F', voltages, 'y_fwhm',\
+                         x_label='voltage (V)', y_label='$y_{fwhm}$')
+    ax = fig.add_subplot(255)
+    add_analysis_subplot(ax, 'F', voltages, 'amp',\
+                         x_label='voltage (V)', y_label='$F_{amp}$')
+    # current subplots #
     ax = fig.add_subplot(256)
-    for var in (v for v in variables if v == 'r' or v == 'theta'):
-        if var == 'r': name = r'$I_r$'
-        elif var == 'theta': name = r'$I_\theta$'
-        sax = ax.errorbar(voltages, vars()[var+'_x0'],
-                          #yerr=vars()[var+'_x_fwhm'],
-                          fmt='o', linestyle='', markersize=4, label=name)
-    fig_details(ax)
-    ax.set_xlim(0.9*voltages.min(), 1.1*voltages.max())
-    ax.set_xlabel('voltage (V)')
-    ax.set_ylabel('$x_0$')
-
+    add_analysis_subplot(ax, 'I', voltages, 'x0',\
+                         x_label='voltage (V)', y_label='$x_0$')
     ax = fig.add_subplot(257)
-    for var in (v for v in variables if v == 'r' or v == 'theta'):
-        if var == 'r': name = r'$I_r$'
-        elif var == 'theta': name = r'$I_\theta$'
-        sax = ax.errorbar(voltages, vars()[var+'_y0'],
-                          #yerr=vars()[var+'_y_fwhm'],
-                          fmt='o', linestyle='', markersize=4, label=name)
-    fig_details(ax)
-    ax.set_xlim(0.9*voltages.min(), 1.1*voltages.max())
-    ax.set_xlabel('voltage (V)')
-    ax.set_ylabel('$y_0$')
-
+    add_analysis_subplot(ax, 'I', voltages, 'y0',\
+                         x_label='voltage (V)', y_label='$y_0$')
     ax = fig.add_subplot(258)
-    for var in (v for v in variables if v == 'r' or v == 'theta'):
-        if var == 'r': name = r'$I_r$'
-        elif var == 'theta': name = r'$I_\theta$'
-        sax = ax.errorbar(voltages, vars()[var+'_x_fwhm'],
-                          #yerr=vars()[var+'_x_fwhm'],
-                          fmt='o', linestyle='', markersize=4, label=name)
-    fig_details(ax)
-    ax.set_xlim(0.9*voltages.min(), 1.1*voltages.max())
-    ax.set_xlabel('voltage (V)')
-    ax.set_ylabel('$x_{fwhm}$')
-
+    add_analysis_subplot(ax, 'I', voltages, 'x_fwhm',\
+                         x_label='voltage (V)', y_label='$x_{fwhm}$')
     ax = fig.add_subplot(259)
-    for var in (v for v in variables if v == 'r' or v == 'theta'):
-        if var == 'r': name = r'$I_r$'
-        elif var == 'theta': name = r'$I_\theta$'
-        sax = ax.errorbar(voltages, vars()[var+'_y_fwhm'],
-                          #yerr=vars()[var+'_y_fwhm'],
-                          fmt='o', linestyle='', markersize=4, label=name)
-    fig_details(ax)
-    ax.set_xlim(0.9*voltages.min(), 1.1*voltages.max())
-    ax.set_xlabel('voltage (V)')
-    ax.set_ylabel('$y_{fwhm}$')
-
-    rax = fig.add_subplot(2,5,10)
-    tax = rax.twinx()
-    for var in (v for v in variables if v == 'r' or v == 'theta'):
-        if var == 'r':
-            name = r'$I_r$'
-            ax = rax
-            fmtv = 'ro'
-        elif var == 'theta':
-            name = r'$I_\theta$'
-            ax = tax
-            fmtv = 'bo'
-        sax = ax.errorbar(voltages, vars()[var+'_amp'],
-                          #yerr=vars()[var+'_y_fwhm'],
-                          fmt=fmtv, linestyle='', markersize=4, label=name)
-    #fig_details(rax); fig_details(tax)
-    rax.set_xlim(0.9*voltages.min(), 1.1*voltages.max())
-    rax.set_xlabel('voltage (V)')
-    rax.set_ylabel('$I_{amp}$')
-    
+    add_analysis_subplot(ax, 'I', voltages, 'y_fwhm',\
+                         x_label='voltage (V)', y_label='$y_{fwhm}$')
+    ax = fig.add_subplot(2,5,10)
+    add_analysis_subplot(ax, 'I', voltages, 'amp',\
+                         x_label='voltage (V)', y_label='$I_{amp}$')
     plt.tight_layout()
     fname = os.path.join(analysis_folder, "alignment_set_" + str(scan_seq) + " - fit vs voltage")
     print "saving figure to", fname, ".png"
     plt.savefig(fname + '.png', bbox_inches=0)
 
-###
     # plot figure #
     fig = plt.figure()
+    # force subplots #
     ax = fig.add_subplot(251)
-    for var in (v for v in variables if v == 'fr' or v == 'ftheta'):
-        if var == 'fr': name = r'$F_r$'
-        elif var == 'ftheta': name = r'$F_\theta$'
-        sax = ax.errorbar(scan_ns, vars()[var+'_x0'],
-                          #yerr=vars()[var+'_x_fwhm'],
-                          fmt='o', linestyle='', markersize=4, label=name)
-    fig_details(ax)
-    ax.set_ylabel('$x_0$')
-
+    add_analysis_subplot(ax, 'F', scan_ns, 'x0',\
+                         x_label='scan #', y_label='$x_0$')
     ax = fig.add_subplot(252)
-    for var in (v for v in variables if v == 'fr' or v == 'ftheta'):
-        if var == 'fr': name = r'$F_r$'
-        elif var == 'ftheta': name = r'$F_\theta$'
-        sax = ax.errorbar(scan_ns, vars()[var+'_y0'],
-                          #yerr=vars()[var+'_y_fwhm'],
-                          fmt='o', linestyle='', markersize=4, label=name)
-    fig_details(ax)
-    ax.set_ylabel('$y_0$')
-
+    add_analysis_subplot(ax, 'F', scan_ns, 'y0',\
+                         x_label='scan #', y_label='$y_0$')
     ax = fig.add_subplot(253)
-    for var in (v for v in variables if v == 'fr' or v == 'ftheta'):
-        if var == 'fr': name = r'$F_r$'
-        elif var == 'ftheta': name = r'$F_\theta$'
-        sax = ax.errorbar(scan_ns, vars()[var+'_x_fwhm'],
-                          #yerr=vars()[var+'_x_fwhm'],
-                          fmt='o', linestyle='', markersize=4, label=name)
-    fig_details(ax)
-    ax.set_ylabel('$x_{fwhm}$')
-
+    add_analysis_subplot(ax, 'F', scan_ns, 'x_fwhm',\
+                         x_label='scan #', y_label='$x_{fwhm}$')
     ax = fig.add_subplot(254)
-    for var in (v for v in variables if v == 'fr' or v == 'ftheta'):
-        if var == 'fr': name = r'$F_r$'
-        elif var == 'ftheta': name = r'$F_\theta$'
-        sax = ax.errorbar(scan_ns, vars()[var+'_y_fwhm'],
-                          #yerr=vars()[var+'_y_fwhm'],
-                          fmt='o', linestyle='', markersize=4, label=name)
-    fig_details(ax)
-    ax.set_ylabel('$y_{fwhm}$')
-
+    add_analysis_subplot(ax, 'F', scan_ns, 'y_fwhm',\
+                         x_label='scan #', y_label='$y_{fwhm}$')
     rax = fig.add_subplot(255)
     tax = rax.twinx()
-    for var in (v for v in variables if v == 'fr' or v == 'ftheta'):
-        if var == 'fr':
-            name = r'$F_r$'
-            ax = rax
-            fmtv = 'ro'
-        elif var == 'ftheta':
-            name = r'$F_\theta$'
-            ax = tax
-            fmtv = 'bo'
-        sax = ax.errorbar(scan_ns, vars()[var+'_amp'],
-                          #yerr=vars()[var+'_y_fwhm'],
-                          fmt=fmtv, linestyle='', markersize=4, label=name)
-    #fig_details(rax); fig_details(tax)
-    rax.set_ylabel('$F_{amp}$')
-
+    add_analysis_subplot(rax, 'F', scan_ns, 'amp',\
+                         x_label='scan #', y_label='$F_{amp}$')
+    # current subplots #
     ax = fig.add_subplot(256)
-    for var in (v for v in variables if v == 'r' or v == 'theta'):
-        if var == 'r': name = r'$I_r$'
-        elif var == 'theta': name = r'$I_\theta$'
-        sax = ax.errorbar(scan_ns, vars()[var+'_x0'],
-                          #yerr=vars()[var+'_x_fwhm'],
-                          fmt='o', linestyle='', markersize=4, label=name)
-    fig_details(ax)
-    ax.set_ylabel('$x_0$')
-
+    add_analysis_subplot(ax, 'I', scan_ns, 'x0',\
+                         x_label='scan #', y_label='$x_0$')
     ax = fig.add_subplot(257)
-    for var in (v for v in variables if v == 'r' or v == 'theta'):
-        if var == 'r': name = r'$I_r$'
-        elif var == 'theta': name = r'$I_\theta$'
-        sax = ax.errorbar(scan_ns, vars()[var+'_y0'],
-                          #yerr=vars()[var+'_y_fwhm'],
-                          fmt='o', linestyle='', markersize=4, label=name)
-    fig_details(ax)
-    ax.set_ylabel('$y_0$')
-
+    add_analysis_subplot(ax, 'I', scan_ns, 'y0',\
+                         x_label='scan #', y_label='$y_0$')
     ax = fig.add_subplot(258)
-    for var in (v for v in variables if v == 'r' or v == 'theta'):
-        if var == 'r': name = r'$I_r$'
-        elif var == 'theta': name = r'$I_\theta$'
-        sax = ax.errorbar(scan_ns, vars()[var+'_x_fwhm'],
-                          #yerr=vars()[var+'_x_fwhm'],
-                          fmt='o', linestyle='', markersize=4, label=name)
-    fig_details(ax)
-    ax.set_ylabel('$x_{fwhm}$')
-
+    add_analysis_subplot(ax, 'I', scan_ns, 'x_fwhm',\
+                         x_label='scan #', y_label='$x_{fwhm}$')
     ax = fig.add_subplot(259)
-    for var in (v for v in variables if v == 'r' or v == 'theta'):
-        if var == 'r': name = r'$I_r$'
-        elif var == 'theta': name = r'$I_\theta$'
-        sax = ax.errorbar(scan_ns, vars()[var+'_y_fwhm'],
-                          #yerr=vars()[var+'_y_fwhm'],
-                          fmt='o', linestyle='', markersize=4, label=name)
-    fig_details(ax)
-    ax.set_ylabel('$y_{fwhm}$')
-
+    add_analysis_subplot(ax, 'I', scan_ns, 'y_fwhm',\
+                         x_label='scan #', y_label='$y_{fwhm}$')
     rax = fig.add_subplot(2,5,10)
     tax = rax.twinx()
-    for var in (v for v in variables if v == 'r' or v == 'theta'):
-        if var == 'r':
-            name = r'$I_r$'
-            ax = rax
-            fmtv = 'ro'
-        elif var == 'theta':
-            name = r'$I_\theta$'
-            ax = tax
-            fmtv = 'bo'
-        sax = ax.errorbar(scan_ns, vars()[var+'_amp'],
-                          #yerr=vars()[var+'_y_fwhm'],
-                          fmt=fmtv, linestyle='', markersize=4, label=name)
-    #fig_details(rax); fig_details(tax)
-    rax.set_ylabel('$I_{amp}$')
-    
+    add_analysis_subplot(rax, 'I', scan_ns, 'amp',\
+                         x_label='scan #', y_label='$I_{amp}$')
+
     plt.tight_layout()
     fname = os.path.join(analysis_folder, "alignment_set_" + str(scan_seq) + " - fits")
     print "saving figure to", fname, ".png"
     plt.savefig(fname + '.png', bbox_inches=0)
-###
+    ###
 
     fig = plt.figure(figsize=(6, 3))
     ax = fig.add_subplot(121)
-    ax.plot(voltages, 1000*(vars()['fr_x0']-vars()['ftheta_x0']),
+    ax.plot(voltages, 1000*(globals()['fr_x0']-globals()['ftheta_x0']),
             'k', marker='o', markersize=4, linestyle='')
     ax.set_xlabel('voltage (V)')
     ax.set_ylabel('$\Delta x_0$ (nm)')
     ax.set_xlim(0.9*voltages.min(), 1.1*voltages.max())
     
     ax = fig.add_subplot(122)
-    ax.plot(voltages, 1000*(vars()['fr_y0']-vars()['ftheta_y0']),
+    ax.plot(voltages, 1000*(globals()['fr_y0']-globals()['ftheta_y0']),
             'k', marker='o', markersize=4, linestyle='')
     ax.set_xlabel('voltage (V)')
     ax.set_ylabel('$\Delta y_0$ (nm)')
@@ -486,315 +338,6 @@ def analyse_alignment_data(scan_seq_dir, scan_seq=0):
     fname = os.path.join(analysis_folder, "alignment_set_" + str(scan_seq) + " - amplitude-phase deviation")
     print "saving figure to", fname, ".png"
     plt.savefig(fname + '.png', bbox_inches=0)
-    return 0
-
-def display_scan_seq(scan_seq_dir, scan_seq):
-    # scan_seq_dir is a string, scan_seq is an integer #
-    print "analysing alignment set", scan_seq, "in", scan_seq_dir
-
-    ## IDENTIFYING DATA ##
-    # isolate scan sequence in set of sequences #
-    scans = [os.path.join(scan_seq_dir, scan)
-             for scan in os.listdir(scan_seq_dir)
-             if os.path.isdir(os.path.join(scan_seq_dir, scan))]
-    scans_in_seq = []
-    
-    # data storage arrays #
-    # scan parameters #
-    voltages = np.array([])
-    positions = np.array([])
-    # fitted centroid #
-    x0s = np.array([])
-    y0s = np.array([])
-    # electronic centroids #
-    x_x0s = np.array([])
-    x_y0s = np.array([])
-    y_x0s = np.array([])
-    y_y0s = np.array([])
-    r_x0s = np.array([])
-    r_y0s = np.array([])
-    theta_x0s = np.array([])
-    theta_y0s = np.array([])
-    psd_x0s = np.array([])
-    psd_y0s = np.array([])
-    # force centroids #
-    fx_x0s = np.array([])
-    fx_y0s = np.array([])
-    fy_x0s = np.array([])
-    fy_y0s = np.array([])
-    fr_x0s = np.array([])
-    fr_y0s = np.array([])
-    ftheta_x0s = np.array([])
-    ftheta_y0s = np.array([])
-
-    # look through scans for those matching the requested alignment set #
-    for scan in scans:
-        # load scan parameters to identify valid scans #
-        params = load_params(target)
-
-        # fix any KeyError issues for missing/obselete entries #
-        try:    # alignment set #
-            seq = params['alignment_set']
-        except KeyError:
-            print "KeyError (",os.path.basename(scan),") - alignment_set not recorded: seq = 0"
-            seq = 0
-        #print 'seq =', seq
-
-        # identify whether scan used electronic and/or force alignment techniques #
-        try:
-            electronic_alignment = params['electronic_alignment']
-        except KeyError:
-            electronic_alignment = 1
-        try:
-            force_alignment = params['force_alignment']
-        except KeyError:
-            force_alignment = 0
-
-        ## EXTRACTING DATA ##
-        # append data from all matching scans to storage arrays #
-        if seq == scan_seq:
-            # extract fitted centroids where possible #
-            try:
-                x0 = params['x0']
-                y0 = params['y0']
-            except KeyError:
-                print "KeyError (",os.path.basename(scan),")- x0,y0 not recorded: x0,y0 = 0"
-                x0 = 0
-                y0 = 0
-                #continue
-            
-            # only append if there was a fitted centroid #
-            print 'appending', os.path.basename(scan)
-            scans_in_seq.append(os.path.basename(scan))
-            # extract relevant parameters #
-            voltages = np.append(voltages, params['voltage'])
-            positions = np.append(positions, params['init_pos_a'])
-            x0s = np.append(x0s, x0)
-            y0s = np.append(y0s, y0)
-            
-            # extract electronic centroids where possible #
-            if electronic_alignment:
-                # x #
-                try:
-                    x0 = params['x_x0']
-                    y0 = params['x_y0']
-                except KeyError:
-                    x0 = 0
-                    y0 = 0
-                x_x0s = np.append(x_x0s, x0)
-                x_y0s = np.append(x_y0s, y0)
-                # y #
-                try:
-                    x0 = params['y_x0']
-                    y0 = params['y_y0']
-                except KeyError:
-                    x0 = 0
-                    y0 = 0
-                y_x0s = np.append(y_x0s, x0)
-                y_y0s = np.append(y_y0s, y0)
-                # r #
-                try:
-                    x0 = params['r_x0']
-                    y0 = params['r_y0']
-                except KeyError:
-                    x0 = 0
-                    y0 = 0
-                r_x0s = np.append(r_x0s, x0)
-                r_y0s = np.append(r_y0s, y0)
-                # theta #
-                try:
-                    x0 = params['theta_x0']
-                    y0 = params['theta_y0']
-                except KeyError:
-                    x0 = 0
-                    y0 = 0
-                theta_x0s = np.append(theta_x0s, x0)
-                theta_y0s = np.append(theta_y0s, y0)
-                # psd #
-                try:
-                    x0 = params['psd_x0']
-                    y0 = params['psd_y0']
-                except KeyError:
-                    x0 = 0
-                    y0 = 0
-                psd_x0s = np.append(psd_x0s, x0)
-                psd_y0s = np.append(psd_y0s, y0)
-            # extract force centroids where possible #
-            if force_alignment:
-                # fx #
-                try:
-                    x0 = params['fx_x0']
-                    y0 = params['fx_y0']
-                except KeyError:
-                    x0 = 0
-                    y0 = 0
-                fx_x0s = np.append(fx_x0s, x0)
-                fx_y0s = np.append(fx_y0s, y0)
-                # fy #
-                try:
-                    x0 = params['fy_x0']
-                    y0 = params['fy_y0']
-                except KeyError:
-                    x0 = 0
-                    y0 = 0
-                fy_x0s = np.append(fy_x0s, x0)
-                fy_y0s = np.append(fy_y0s, y0)
-                # fr #
-                try:
-                    x0 = params['fr_x0']
-                    y0 = params['fr_y0']
-                except KeyError:
-                    x0 = 0
-                    y0 = 0
-                fr_x0s = np.append(fr_x0s, x0)
-                fr_y0s = np.append(fr_y0s, y0)
-                # ftheta #
-                try:
-                    x0 = params['ftheta_x0']
-                    y0 = params['ftheta_y0']
-                except KeyError:
-                    x0 = 0
-                    y0 = 0
-                ftheta_x0s = np.append(ftheta_x0s, x0)
-                ftheta_y0s = np.append(ftheta_y0s, y0)
-            
-    #print "scans in seq =", scans_in_seq
-
-    # adjust data #
-    positions = positions - positions.min()
-
-    ## DATA LOADED ##
-    ## PLOT DATA ##
-    # set up figure properties for all figures #
-    fig_width_cm = 25.0
-    inches_per_cm = 1.0/2.54
-    fig_width = fig_width_cm * inches_per_cm
-    golden_mean = (np.sqrt(5)-1.0)/2.0         # Aesthetic ratio
-    fig_height = golden_mean * fig_width
-    fig_size = (fig_width, fig_height)
-    params = {'backend': 'ps',
-            'axes.labelsize': 11,
-            'text.fontsize': 11,
-            'legend.fontsize': 11,
-            'xtick.labelsize': 11,
-            'ytick.labelsize': 11,
-            'text.usetex': False,
-            'figure.subplot.left' : 0.01,
-            'figure.subplot.bottom' : 0.01,
-            'figure.subplot.right' : 0.99,
-            'figure.subplot.top' : 0.99,
-            'figure.subplot.wspace' : 0.04,
-            'figure.subplot.hspace' : 0.00,
-            'figure.figsize': fig_size}
-    plt.rcParams.update(params)
-    #plt.close('all')
-
-    ## SCATTER PLOT OF FITTED CENTROIDS VS VOLTAGE AND POSITION ##
-    fig = plt.figure()
-    ax = fig.add_subplot(121, projection='3d')
-    ax.view_init(elev=20.0, azim=-45.0)
-    ax.scatter(voltages, positions, x0s)
-    ax.set_xlabel('voltage')
-    ax.set_ylabel('axial position')
-    ax.set_zlabel('x0')
-
-    ax = fig.add_subplot(122, projection='3d')
-    ax.view_init(elev=20.0, azim=-45.0)
-    ax.scatter(voltages, positions, y0s)
-    ax.set_xlabel('voltage')
-    ax.set_ylabel('axial position')
-    ax.set_zlabel('y0')
-
-    plt.tight_layout()
-    #alignment_folder = os.path.dirname(scan_seq_dir)
-    day_folder = os.path.dirname(scan_seq_dir)
-    fname = os.path.join(day_folder, "alignment_set_" + str(scan_seq)) + "_3d"
-    print "saving figure to", fname, ".png"
-    plt.savefig(fname + '.png', bbox_inches=0)
-
-    ## FITTED CENTROIDS AS A FUNCTION OF POSITION AND VOLTAGE ##
-    fig = plt.figure()
-    ax = fig.add_subplot(121)
-    sax = ax.scatter(positions, x0s, c=voltages, marker='o', s=40, cmap=cm.jet)
-    ax.set_xlabel('axial position')
-    ax.set_ylabel('x0')
-    cb = plt.colorbar(sax, shrink=0.75)
-    cb.set_label('voltage')
-
-    ax = fig.add_subplot(122)
-    sax = ax.scatter(positions, y0s, c=voltages, marker='o', s=40, cmap=cm.jet)
-    ax.set_xlabel('axial position')
-    ax.set_ylabel('y0')
-    cb = plt.colorbar(sax, shrink=0.75)
-    cb.set_label('voltage')
-
-    plt.tight_layout()
-    day_folder = os.path.dirname(scan_seq_dir)
-    fname = os.path.join(day_folder, "alignment_set_" + str(scan_seq))
-    print "saving figure to", fname, ".png"
-    plt.savefig(fname + '.png', bbox_inches=0)
-
-    ## PLOT ALL CENTROID FITS FOR EACH SCAN IN THE SET ##
-    fig = plt.figure()
-    ax = fig.add_subplot(121)
-    if electronic_alignment:
-        sax = ax.scatter(positions, x_x0s, c=voltages, marker='v', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$x$')
-        sax = ax.scatter(positions, y_x0s, c=voltages, marker='^', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$y$')
-        sax = ax.scatter(positions, r_x0s, c=voltages, marker='<', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$r$')
-        sax = ax.scatter(positions, theta_x0s, c=voltages, marker='>', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$\theta$')
-        sax = ax.scatter(positions, psd_x0s, c=voltages, marker='h', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$V_psd$')
-    if force_alignment:
-        sax = ax.scatter(positions, fx_x0s, c=voltages, marker='o', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$F_x$')
-        sax = ax.scatter(positions, fy_x0s, c=voltages, marker='s', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$F_y$')
-        sax = ax.scatter(positions, fr_x0s, c=voltages, marker='*', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$F_r$')
-        sax = ax.scatter(positions, ftheta_x0s, c=voltages, marker='p', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$F_\theta$')
-    ax.set_xlabel('axial position')
-    ax.set_ylabel('x0')
-    ax.legend()
-    cb = plt.colorbar(sax, shrink=0.75)
-    cb.set_label('voltage')
-
-    ax = fig.add_subplot(122)
-    if electronic_alignment:
-        sax = ax.scatter(positions, x_y0s, c=voltages, marker='v', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$x$')
-        sax = ax.scatter(positions, y_y0s, c=voltages, marker='^', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$y$')
-        sax = ax.scatter(positions, r_y0s, c=voltages, marker='<', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$r$')
-        sax = ax.scatter(positions, theta_y0s, c=voltages, marker='>', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$\theta$')
-        sax = ax.scatter(positions, psd_y0s, c=voltages, marker='h', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$V_psd$')
-    if force_alignment:
-        sax = ax.scatter(positions, fx_y0s, c=voltages, marker='o', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$F_x$')
-        sax = ax.scatter(positions, fy_y0s, c=voltages, marker='s', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$F_y$')
-        sax = ax.scatter(positions, fr_y0s, c=voltages, marker='*', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$F_r$')
-        sax = ax.scatter(positions, ftheta_y0s, c=voltages, marker='p', s=40,
-                         alpha=0.6, cmap=cm.jet, label='$F_\theta$')
-    ax.set_xlabel('axial position')
-    ax.set_ylabel('y0')
-    cb = plt.colorbar(sax, shrink=0.75)
-    cb.set_label('voltage')
-
-    plt.tight_layout()
-    day_folder = os.path.dirname(scan_seq_dir)
-    fname = os.path.join(day_folder, "scan_set_" + str(scan_seq))
-    print "saving figure to", fname, ".png"
-    plt.savefig(fname + '.png', bbox_inches=0)
-    
     return 0
 
 if __name__ == '__main__':
