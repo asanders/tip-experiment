@@ -1,6 +1,6 @@
-"""
+'''
 Analyses tip alignment data.
-"""
+'''
 
 import os
 import sys
@@ -40,8 +40,7 @@ def get_scan_list(scan_seq_dir, scan_seq):
     for scan in scans:
         params = load_params(scan)    # load scan parameters #
         # fix any KeyError issues for missing/obselete entries #
-        try:    # alignment set #
-            seq = params['alignment_set']
+        try: seq = params['alignment_set']
         except KeyError:
             #print "KeyError (",os.path.basename(scan),") - alignment_set not recorded: seq = 0"
             seq = 0

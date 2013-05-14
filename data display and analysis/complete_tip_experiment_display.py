@@ -78,3 +78,5 @@ scans = [os.path.join(path, x) for x in os.listdir(path)
 for scan in scans:
     #print os.path.basename(scan)
     display_experiment_scan(scan)
+
+os.system("pause")
