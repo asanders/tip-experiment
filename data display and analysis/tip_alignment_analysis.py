@@ -19,6 +19,7 @@ from data_handling import *
 from igor.binarywave import load as loadibw
 import numpy as np
 from scipy import ndimage
+import datetime as dt
 # load matplotlib modules #
 from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
@@ -26,6 +27,7 @@ from matplotlib import cm
 from matplotlib import rc
 import matplotlib.gridspec as gridspec
 from mpl_toolkits.mplot3d import proj3d
+from matplotlib import dates
 
 def get_scan_list(scan_seq_dir, scan_seq):
     '''
@@ -64,16 +66,26 @@ def get_alignment_parameters(scans):
     scan_ns = np.array([])
     position_array = np.array([])
     voltage_array = np.array([])
+    time_stamp_array = np.array([])
     for scan in scans:
         params = load_params(scan)
         scan_n = int(scan.rsplit('_',1)[1])
         position = params['init_pos_a']
         voltage = params['voltage']
+        time_stamp = params['time_stamp'].strip('"')
+        time_stamp = dt.datetime.strptime(time_stamp, '%H:%M:%S %d %b %Y')
         scan_ns = np.append(scan_ns, scan_n)
         position_array = np.append(position_array, position)
         voltage_array = np.append(voltage_array, voltage)
+        time_stamp_array = np.append(time_stamp_array, time_stamp)
     position_array = 1000 * (position_array - position_array.min())
-    return scan_ns, position_array, voltage_array
+    # create a dictionary object of parameter arrays #
+    parameter_arrays = {}
+    parameter_arrays['scan_n'] = scan_ns
+    parameter_arrays['voltage'] = voltage_array
+    parameter_arrays['position'] = position_array
+    parameter_arrays['time_stamp'] = time_stamp_array
+    return parameter_arrays
 
 def get_seq_variables(scans):
     #identify what variables were scanned during alignment #
@@ -151,15 +163,17 @@ def analyse_alignment_data(scan_seq_dir, scan_seq=0):
     print "analysing alignment set", scan_seq, "in", scan_seq_dir
     scans = get_scan_list(scan_seq_dir, scan_seq)
     variables = get_seq_variables(scans)
-    scan_ns, positions, voltages = get_alignment_parameters(scans)
+    parameter_arrays = get_alignment_parameters(scans)
     # create save folder #
     day_folder = os.path.dirname(scan_seq_dir)
     analysis_folder = check_folder(os.path.join(day_folder, 'analysis'))
     set_folder = check_folder(os.path.join(analysis_folder,\
                                            'alignment_set_'+str(scan_seq)))
     # save arrays #
-    np.save(os.path.join(set_folder, 'positions.npy'), positions)
-    np.save(os.path.join(set_folder, 'voltages.npy'), voltages)
+    np.save(os.path.join(set_folder, 'positions.npy'), parameter_arrays['position'])
+    np.save(os.path.join(set_folder, 'voltages.npy'), parameter_arrays['voltage'])
+    np.save(os.path.join(set_folder, 'time_stamps.npy'), parameter_arrays['time_stamp'])
+    
     for var in variables:
         globals()[var+'_amp'], globals()[var+'_x0'], globals()[var+'_x_fwhm'],\
         globals()[var+'_y0'], globals()[var+'_y_fwhm']\
@@ -208,6 +222,7 @@ def analyse_alignment_data(scan_seq_dir, scan_seq=0):
         elif source == 'F': vs = ['fr', 'ftheta']
         # set marker colours to red and blue #
         ax.set_color_cycle(['r', 'b'])
+        ax2_exists = False
         for var in (v for v in variables if v in vs):
             if var == 'r': name = r'$I_r$'
             elif var == 'theta': name = r'$I_\theta$'
@@ -215,7 +230,7 @@ def analyse_alignment_data(scan_seq_dir, scan_seq=0):
             elif var == 'ftheta': name = r'$F_\theta$'
             # override axis if twinned axes with different scales are used #
             if y_param == 'amp' and (var == 'fr' or var == 'r'):
-                ax2 = ax
+                ax2 = ax; ax2_exists = True
                 label = y_label.split('{', 1)[0]+'{r,'+y_label.split('{', 1)[1]
                 ax.set_ylabel(label)
             elif y_param == 'amp' and (var == 'ftheta' or var == 'theta'):
@@ -227,97 +242,80 @@ def analyse_alignment_data(scan_seq_dir, scan_seq=0):
                               fmt='o', linestyle='', markersize=4, label=name)
         #ax.text(0.05, 0.95, var, ha='left', va='top', color='black',
         #        fontsize=10, fontweight='bold', transform=ax.transAxes)
-        ax.legend()
-        if 'voltage' or 'scan' in x_label:
+        lines, labels = ax.get_legend_handles_labels()
+        if ax2_exists:
+            axlines, axlabels = ax2.get_legend_handles_labels()
+            lines += axlines
+            labels += axlabels
+        ax.legend(lines, labels, loc='best')
+        if 'voltage' in x_label or 'scan' in x_label:
             ax.set_xlim(0.9*x.min(), 1.1*x.max())
+        elif 'time' in x_label:
+            time_format = dates.DateFormatter('%H:%M')
+            ax.xaxis.set_major_formatter(time_format)
+            labels = ax.get_xticklabels()
+            for label in labels:
+                label.set_fontsize(10)
+                label.set_rotation(60)
+            if ax2_exists:
+                ax2.xaxis.set_major_formatter(time_format)
+                labels = ax2.get_xticklabels()
+                for label in labels:
+                    label.set_fontsize(10)
+                    label.set_rotation(60)
         #ax.set_ylim(0.9*y.min(), 1.1*y.max())
         ax.set_xlabel(x_label)
         if y_param != 'amp':
-            ax.set_ylabel(y_label)
+            ax.set_ylabel(y_label)        
         return 0
-    
-    # plot figure #
-    fig = plt.figure()
-    # force subplots #
-    ax = fig.add_subplot(251)
-    add_analysis_subplot(ax, 'F', voltages, 'x0',\
-                         x_label='voltage (V)', y_label='$x_0$')
-    ax = fig.add_subplot(252)
-    add_analysis_subplot(ax, 'F', voltages, 'y0',\
-                         x_label='voltage (V)', y_label='$y_0$')
-    ax = fig.add_subplot(253)
-    add_analysis_subplot(ax, 'F', voltages, 'x_fwhm',\
-                         x_label='voltage (V)', y_label='$x_{fwhm}$')
-    ax = fig.add_subplot(254)
-    add_analysis_subplot(ax, 'F', voltages, 'y_fwhm',\
-                         x_label='voltage (V)', y_label='$y_{fwhm}$')
-    ax = fig.add_subplot(255)
-    add_analysis_subplot(ax, 'F', voltages, 'amp',\
-                         x_label='voltage (V)', y_label='$F_{amp}$')
-    # current subplots #
-    ax = fig.add_subplot(256)
-    add_analysis_subplot(ax, 'I', voltages, 'x0',\
-                         x_label='voltage (V)', y_label='$x_0$')
-    ax = fig.add_subplot(257)
-    add_analysis_subplot(ax, 'I', voltages, 'y0',\
-                         x_label='voltage (V)', y_label='$y_0$')
-    ax = fig.add_subplot(258)
-    add_analysis_subplot(ax, 'I', voltages, 'x_fwhm',\
-                         x_label='voltage (V)', y_label='$x_{fwhm}$')
-    ax = fig.add_subplot(259)
-    add_analysis_subplot(ax, 'I', voltages, 'y_fwhm',\
-                         x_label='voltage (V)', y_label='$y_{fwhm}$')
-    ax = fig.add_subplot(2,5,10)
-    add_analysis_subplot(ax, 'I', voltages, 'amp',\
-                         x_label='voltage (V)', y_label='$I_{amp}$')
-    plt.tight_layout()
-    fname = os.path.join(analysis_folder, "alignment_set_" + str(scan_seq) + " - fit vs voltage")
-    print "saving figure to", fname, ".png"
-    plt.savefig(fname + '.png', bbox_inches=0)
 
-    # plot figure #
-    fig = plt.figure()
-    # force subplots #
-    ax = fig.add_subplot(251)
-    add_analysis_subplot(ax, 'F', scan_ns, 'x0',\
-                         x_label='scan #', y_label='$x_0$')
-    ax = fig.add_subplot(252)
-    add_analysis_subplot(ax, 'F', scan_ns, 'y0',\
-                         x_label='scan #', y_label='$y_0$')
-    ax = fig.add_subplot(253)
-    add_analysis_subplot(ax, 'F', scan_ns, 'x_fwhm',\
-                         x_label='scan #', y_label='$x_{fwhm}$')
-    ax = fig.add_subplot(254)
-    add_analysis_subplot(ax, 'F', scan_ns, 'y_fwhm',\
-                         x_label='scan #', y_label='$y_{fwhm}$')
-    rax = fig.add_subplot(255)
-    tax = rax.twinx()
-    add_analysis_subplot(rax, 'F', scan_ns, 'amp',\
-                         x_label='scan #', y_label='$F_{amp}$')
-    # current subplots #
-    ax = fig.add_subplot(256)
-    add_analysis_subplot(ax, 'I', scan_ns, 'x0',\
-                         x_label='scan #', y_label='$x_0$')
-    ax = fig.add_subplot(257)
-    add_analysis_subplot(ax, 'I', scan_ns, 'y0',\
-                         x_label='scan #', y_label='$y_0$')
-    ax = fig.add_subplot(258)
-    add_analysis_subplot(ax, 'I', scan_ns, 'x_fwhm',\
-                         x_label='scan #', y_label='$x_{fwhm}$')
-    ax = fig.add_subplot(259)
-    add_analysis_subplot(ax, 'I', scan_ns, 'y_fwhm',\
-                         x_label='scan #', y_label='$y_{fwhm}$')
-    rax = fig.add_subplot(2,5,10)
-    tax = rax.twinx()
-    add_analysis_subplot(rax, 'I', scan_ns, 'amp',\
-                         x_label='scan #', y_label='$I_{amp}$')
+    def add_analysis_figure(parameter, plabel):
+        # plot figure #
+        fig = plt.figure()
+        # force subplots #
+        ax = fig.add_subplot(251)
+        add_analysis_subplot(ax, 'F', parameter_arrays[parameter], 'x0',\
+                             x_label=plabel, y_label='$x_0$')
+        ax = fig.add_subplot(252)
+        add_analysis_subplot(ax, 'F', parameter_arrays[parameter], 'y0',\
+                             x_label=plabel, y_label='$y_0$')
+        ax = fig.add_subplot(253)
+        add_analysis_subplot(ax, 'F', parameter_arrays[parameter], 'x_fwhm',\
+                             x_label=plabel, y_label='$x_{fwhm}$')
+        ax = fig.add_subplot(254)
+        add_analysis_subplot(ax, 'F', parameter_arrays[parameter], 'y_fwhm',\
+                             x_label=plabel, y_label='$y_{fwhm}$')
+        ax = fig.add_subplot(255)
+        add_analysis_subplot(ax, 'F', parameter_arrays[parameter], 'amp',\
+                             x_label=plabel, y_label='$F_{amp}$')
+        # current subplots #
+        ax = fig.add_subplot(256)
+        add_analysis_subplot(ax, 'I', parameter_arrays[parameter], 'x0',\
+                             x_label=plabel, y_label='$x_0$')
+        ax = fig.add_subplot(257)
+        add_analysis_subplot(ax, 'I', parameter_arrays[parameter], 'y0',\
+                             x_label=plabel, y_label='$y_0$')
+        ax = fig.add_subplot(258)
+        add_analysis_subplot(ax, 'I', parameter_arrays[parameter], 'x_fwhm',\
+                             x_label=plabel, y_label='$x_{fwhm}$')
+        ax = fig.add_subplot(259)
+        add_analysis_subplot(ax, 'I', parameter_arrays[parameter], 'y_fwhm',\
+                             x_label=plabel, y_label='$y_{fwhm}$')
+        ax = fig.add_subplot(2,5,10)
+        add_analysis_subplot(ax, 'I', parameter_arrays[parameter], 'amp',\
+                             x_label=plabel, y_label='$I_{amp}$')
+        plt.tight_layout()
+        fname = os.path.join(analysis_folder, "alignment_set_" + str(scan_seq) + ' - fit vs ' + parameter)
+        print "saving figure to", fname, ".png"
+        plt.savefig(fname + '.png', bbox_inches=0)
+        return 0
 
-    plt.tight_layout()
-    fname = os.path.join(analysis_folder, "alignment_set_" + str(scan_seq) + " - fits")
-    print "saving figure to", fname, ".png"
-    plt.savefig(fname + '.png', bbox_inches=0)
-    ###
+    add_analysis_figure('voltage', 'voltage (V)')
+    add_analysis_figure('scan_n', 'scan #')
+    add_analysis_figure('time_stamp', 'time')
+    add_analysis_figure('position', 'position (nm)')
 
+    voltages = parameter_arrays['voltage']
     fig = plt.figure(figsize=(6, 3))
     ax = fig.add_subplot(121)
     ax.plot(voltages, 1000*(globals()['fr_x0']-globals()['ftheta_x0']),

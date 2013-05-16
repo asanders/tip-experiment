@@ -72,6 +72,7 @@ if os.path.exists(os.path.join(init_path, 'alignment_scans')):
         
 
 # tip experiment scans #
+print '\n'
 path = init_path
 scans = [os.path.join(path, x) for x in os.listdir(path)
          if os.path.isdir(os.path.join(path, x)) and "tip_exp_" in x]
