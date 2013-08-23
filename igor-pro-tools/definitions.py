@@ -2,7 +2,7 @@
 data_locs = {}
 data_locs['ALAN-VAIO'] = 'C:\\Users\\Alan\\SkyDrive\\Documents\\phd\\'\
                          '0 - experiment\\data\\raw data'
-data_locs['NP-ASTATINE'] = 'C:\\Users\\Alan\\Documents\\0 - experiment\\'\
+data_locs['NP-ASTATINE'] = 'C:\\Users\\Alan\\Documents\\0 - PhD\\0 - experiment\\'\
                            'data\\raw data'
 data_locs['NP-MAGNESIUM'] = 'C:\\Users\\Hera\\Desktop\\tip_exp\\raw_data'
 
