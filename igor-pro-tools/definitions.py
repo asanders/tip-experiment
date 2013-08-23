@@ -1,6 +1,6 @@
 # dictionary of computer name to data folder locations
 data_locs = {}
-data_locs['ALAN-VAIO'] = 'C:\\Users\\Alan\\SkyDrive\\Documents\\work\\'\
+data_locs['ALAN-VAIO'] = 'C:\\Users\\Alan\\SkyDrive\\Documents\\phd\\'\
                          '0 - experiment\\data\\raw data'
 data_locs['NP-ASTATINE'] = 'C:\\Users\\Alan\\Documents\\0 - experiment\\'\
                            'data\\raw data'

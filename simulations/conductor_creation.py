@@ -21,11 +21,11 @@ def create_tips(d0, theta1, theta2, x_offset):
         # left (x < 0) tip surface defined by equation  #
         # y + (1.0/np.tan(theta2))*x - d0/2 = 0         #
         if y + (1.0/np.tan(theta2))*x - d0/2 >= 0 and x < 0:
-            return 1
+            return -1
         # right (x >= 0) tip surface defined by equation  #
         # y - (1.0/np.tan(theta1))*x - d0/2 = 0           #
         elif y - (1.0/np.tan(theta1))*x - d0/2 >= 0 and x >= 0:
-            return 1
+            return -1
         else:
             return 0
     return create_tip1, create_tip2
@@ -76,7 +76,7 @@ def charge_distribution(object_name, x, y, space):
 
 def create_tip_space(d0, theta1, theta2, x_offset):
     # create grid space and dimension scaling #
-    nx = 200; ny = 200; nz = 11
+    nx = 50; ny = 50; nz = 11
     x = np.linspace(-5e-6, 5e-6, nx)
     y = np.linspace(-5e-6, 5e-6, ny)
     z = np.linspace(-10e-6, 10e-6, nz)
