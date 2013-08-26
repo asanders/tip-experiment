@@ -1,0 +1,35 @@
+\mode{mode1}
+    function: lorentzian
+    \begin{parameters}
+        amplitude, value=1.0, min=0.0
+        centre, value=550e-9, min=0.0
+        width, value=50e-9, min=0.0
+    \end{parameters}
+\endmode
+
+\mode{mode2}
+    function: lorentzian
+    \begin{parameters}
+        amplitude, value=1.0, min=0.0
+        centre, value=750e-9, min=0.0
+        width, value=50e-9, min=0.0
+    \end{parameters}
+\endmode
+
+\mode{mode3}
+    function: lorentzian
+    \begin{parameters}
+        amplitude, value=0.2, min=0.0
+        centre, value=700e-9, min=0.0
+        width, value=50e-9, min=0.0
+    \end{parameters}
+\endmode
+
+\mode{mode4}
+    function: lorentzian
+    \begin{parameters}
+        amplitude, value=1.0, min=0.0
+        centre, value=500e-9, min=0.0
+        width, value=200e-9, min=0.0
+    \end{parameters}
+\endmode

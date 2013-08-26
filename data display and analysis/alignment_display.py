@@ -1,4 +1,4 @@
-from alignment_classes import *
+from alignment_data_classes import *
 from scipy import ndimage
 import matplotlib.pyplot as plt
 

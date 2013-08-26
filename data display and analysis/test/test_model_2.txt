@@ -1,0 +1,8 @@
+\mode{dimer}
+    function: lorentzian
+    \begin{parameters}
+        amplitude, value=0.01, min=0.0
+        centre, value=725, min=0.0
+        width, value=50, min=0.0
+    \end{parameters}
+\endmode

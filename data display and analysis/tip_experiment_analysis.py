@@ -1,4 +1,4 @@
-from data_classes import *
+from library.data_classes.tip_experiment_data_classes import *
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -24,6 +24,7 @@ class bin_data:
         self.bins = bins
         self.n_bins = len(bins)-1
         self.digitized = np.digitize(bin_param, self.bins)
+        self.binned_param = np.array([bin_param[self.digitized==i].mean() for i in range(1, len(self.bins))])
         self.bin_axis = np.array([(self.bins[i]+self.bins[i-1])/2 for i in range(1, len(self.bins))])
         # bin data #
         self.step = np.array([data.step[self.digitized==i].mean() for i in range(1, len(self.bins))])
@@ -53,6 +54,24 @@ class bin_data:
                 temp_spectra /= n_spectra
                 binned_spectra[i-1] = temp_spectra
             self.spectra_trans = binned_spectra
+        # axis data #
+        self.wavelength_long = data.wavelength_long
+        if data.dual_pol: self.wavelength_trans = data.wavelength_trans
+        # clean up missing values #
+        self.binned_param = np.nan_to_num(self.binned_param)
+        self.binned_param = np.ma.masked_equal(self.binned_param, 0.0)
+        self.bin_axis = self.bin_axis[self.binned_param.mask == False]
+        self.step = self.step[self.binned_param.mask == False]
+        self.displacement = self.displacement[self.binned_param.mask == False]
+        self.current = self.current[self.binned_param.mask == False]
+        self.conductance = self.conductance[self.binned_param.mask == False]
+        self.force_y = self.force_y[self.binned_param.mask == False]
+        self.force_x = self.force_x[self.binned_param.mask == False]
+        self.spectra_long = self.spectra_long[self.binned_param.mask == False]
+        if data.dual_pol: self.spectra_trans = self.spectra_trans[self.binned_param.mask == False]
+        
+        
+        
 
 def display_data(data, x_ax_data, y_ax_data):
     formatter = plt.ScalarFormatter(useOffset=False, useMathText=True)

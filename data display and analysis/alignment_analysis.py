@@ -9,7 +9,7 @@ module_dir = os.path.join(root_dir, "igor-pro-tools")
 if module_dir not in sys.path:
 	sys.path.append(module_dir)
 from definitions import *
-from alignment_classes import *
+from alignment_data_classes import *
 import numpy as np
 
 import datetime as dt
