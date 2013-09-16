@@ -93,7 +93,7 @@ def display_data(data, x_ax_data, y_ax_data):
     # add colour bar to far right of figure #
     cb = plt.colorbar(cfax, shrink=0.75, extend='both')
     cb.set_label('optical scattering (a.u.)')
-    ax.set_yscale('log')
+    #ax.set_yscale('log')
     ax.xaxis.set_major_formatter(formatter)
 
 if __name__ == '__main__':
@@ -129,4 +129,4 @@ if __name__ == '__main__':
         fname = os.path.join(fig_folder, 'binned_conductance_' + str(binned_data.n_bins))
         plt.savefig(fname + '.png', bbox_inches=0)
     #
-    #plt.show()
+    plt.show()

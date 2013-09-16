@@ -16,11 +16,29 @@ class fit_spectral_image:
         self.axis = axis
         self.model_crit = model_crit
         
-        def fit_spectra(self):
-            for spectrum in self.spectral_image:
-                # load corresponding model
-                #fit = fit_spectra(noisy_spectra, wavelength, model_modes)
-                pass
+        self.fits = []
+        self.fit()
+        
+        self.fitted_spectra = np.zeros_like(self.spectral_image)
+        for i in range(self.spectral_image.shape[0]):
+            self.fitted_spectra[i] = self.fits[i].fitted_spectra
+        
+    def fit(self):
+        save_dir = 'c:/users/alan/skydrive/documents/phd/0 - experiment/data/best data/nov_2012/day_21_analysis'
+        num_spec = self.spectral_image.shape[0]
+        for i in range(num_spec):
+            model, model_name = self.model_crit(i)
+            fit = spectra_fit.fit_spectra(self.spectral_image[i], self.axis, model)
+            self.fits.append(fit)
+            
+            plt.figure()
+            plt.plot(fit.axis, fit.spectra, 'k.')
+            plt.plot(fit.axis, fit.fitted_spectra, 'r-')
+            for mode in fit.fitted_modes:
+                plt.plot(fit.axis, fit.fitted_modes[mode], 'r--')
+            fname = os.path.join(save_dir, 'spec_'+str(i)+'_'+model_name)
+            plt.savefig(fname + '.png', bbox_inches=0)
+            plt.close()
 
 def fit_specim(specim, wav, model_crit):
     fitim = np.zeros_like(specim)
@@ -28,11 +46,11 @@ def fit_specim(specim, wav, model_crit):
     num_spec = specim.shape[0]
     for i in range(num_spec):
         spec = specim[i]
-        model = model_crit(i)
+        model, model_name = model_crit(i)
         fit = spectra_fit.fit_spectra(spec, wav, model)
         fitim[i] = fit.fitted_spectra
         peaks[i] = np.array([fit.parameters['dipole_centre'].value, fit.parameters['quad_centre'].value])
-    return fitim, peaks
+    return fit, peaks
 
 def display_data(data, x_ax_data=None, y_ax_data=None):
     if x_ax_data == None: x_ax_data = np.linspace(0, data.shape[1], data.shape[1])
@@ -66,29 +84,56 @@ if __name__ == '__main__':
     data.spectra_long = data.spectra_long[1:]
     data.step = np.linspace(0, data.spectra_long.shape[0], data.spectra_long.shape[0])
     data.rescale_wavelength()
-    data.set_wavelength_roi(500e-9, 820e-9)
+    data.set_wavelength_roi(510e-9, 830e-9)
     
     bins = np.logspace(np.log10(data.conductance.min()), np.log10(data.conductance.max()), 41)
     bins[0] = 0.0
-    data = bin_data(data, data.conductance, bins)            
+    #data = bin_data(data, data.conductance, bins)            
     
-    display_data(data.spectra_long, data.wavelength_long, data.bin_axis)
+    #display_data(data.spectra_long, data.wavelength_long, data.bin_axis)
     print 'image displayed'
-    def get_model_file(i):
+    def get_model_file2(i):
         model_loc = os.path.join(data_loc, 'analysis')
         if i < 4: #i < 110:
+            model_name = 'classical'
             model = spectra_fit.load_model(os.path.join(model_loc,'classical_regime.txt'))
-        elif i>=4 and i<20: #i >=110 and i < 229:
+        elif i>=4 and i<19: #i >=110 and i < 229:
+            model_name = 'tunnelling'
             model = spectra_fit.load_model(os.path.join(model_loc,'tunnelling_regime.txt'))
         else:
+            model_name = 'conductive'
             model = spectra_fit.load_model(os.path.join(model_loc,'conductive_regime.txt'))
-        return model
-    fitim, peaks = fit_specim(data.spectra_long, data.wavelength_long, get_model_file)
+        return model, model_name
+    def get_model_file(i):
+        model_loc = os.path.join(data_loc, 'analysis')
+        if i < 110:
+            model_name = 'classical'
+            model = spectra_fit.load_model(os.path.join(model_loc,'classical_regime.txt'))
+        elif i >=110 and i < 229:
+            model_name = 'tunnelling'
+            model = spectra_fit.load_model(os.path.join(model_loc,'tunnelling_regime.txt'))
+        else:
+            model_name = 'conductive'
+            model = spectra_fit.load_model(os.path.join(model_loc,'conductive_regime.txt'))
+        return model, model_name
+    fit, peaks = fit_specim(data.spectra_long, data.wavelength_long, get_model_file)
+    fit = fit_spectral_image(data.spectra_long, data.wavelength_long, get_model_file)
+    
+    #for i in range(fit.fitted_spectra.shape[0]):
+    #    for mode in fit.fits[i].model.modes:
+    #        print mode
+    #        if 'bkgd' in mode: print mode
     print 'fitted'
-    display_data(fitim, data.wavelength_long, data.bin_axis)
-    plt.figure()
-    plt.plot(data.bin_axis, peaks[:,0], 'ro-')
-    plt.twinx()
-    plt.plot(data.bin_axis, peaks[:,1], 'bo-')
+    #display_data(fit.fitted_spectra, data.wavelength_long, data.bin_axis)
+    
+    mode_specs = np.zeros_like(fit.fitted_spectra)
+    for i in range(fit.spectral_image.shape[0]):
+            mode_specs[i] = fit.fits[i].fitted_modes['dipole'] + fit.fits[i].fitted_modes['quad']
+    display_data(mode_specs, data.wavelength_long, data.step)
+    
+    #plt.figure()
+    #plt.plot(data.bin_axis, peaks[:,0], 'ro-')
+    #plt.twinx()
+    #plt.plot(data.bin_axis, peaks[:,1], 'bo-')
     plt.show()
     print 'finished'

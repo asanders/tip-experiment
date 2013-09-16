@@ -1,7 +1,9 @@
 from igor.binarywave import load as loadibw
 import numpy as np
 import os
-from gaussian_fitting import *
+import sys
+sys.path.append('C:\\Users\\Alan\\Documents\\PhD\\GitHub\\tip-experiment\\data_display_and_analysis')
+from library.methods.gaussian_fitting import *
 
 def load_itx(fname, location):
     with open(os.path.join(location, fname)) as f:
@@ -72,11 +74,14 @@ class afm_alignment_data:
         
         # get alignment variables #
         params = load_parameters(self.location)
+        self.params = params
         self.set = int(params['alignment_set'])
         self.voltage = float(params['voltage'])
         self.position = float(params['init_pos_a'])
         self.time = params['time_stamp']
         self.scan_n = int(os.path.basename(location).rsplit("_", 1)[1])
+        self.scan_size = 1000*float(params['scan_size'])
+        self.scan_step = 1000*float(params['scan_step'])
         
         # analysis variables #
         self.amplitude_x0 = 0
@@ -140,11 +145,11 @@ class resonance_data:
         self.location = location
         
 if __name__ == '__main__':
-    afm_data = afm_alignment_data("C:\\users\\alan\\skydrive\\documents\\phd\\0 - experiment\\data\\raw data\\aug_2013\\day_02\\alignment_scans\\scan_40")
-    try:
-        afm_data_2 = afm_alignment_data("nothing")
-    except IOError:
-        print "no data"
+    afm_data = afm_alignment_data("H:\\data\\raw data\\aug_2013\\day_02\\alignment_scans\\scan_40")
+    #try:
+    #    afm_data_2 = afm_alignment_data("nothing")
+    #except IOError:
+    #    print "no data"
     
     from pylab import *
     matshow(afm_data.amplitude, cmap=cm.Spectral_r)
